@@ -1,4 +1,4 @@
-# $PROJECT_NAME README
+# apple-codesign-action-example README
 
 Congrats, project leads! You got a new project to grow!
 
