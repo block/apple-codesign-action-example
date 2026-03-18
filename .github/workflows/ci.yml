@@ -1,0 +1,158 @@
+name: CI
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+    branches: [main]
+
+# Cancel in-progress runs for the same branch/PR.
+concurrency:
+  group: ${{ github.workflow }}-${{ github.head_ref || github.run_id }}
+  cancel-in-progress: true
+
+jobs:
+  electron:
+    name: "Electron"
+    # Fork PRs cannot access secrets — skip them.
+    if: github.event.pull_request.head.repo.full_name == github.repository || github.event_name == 'push'
+    runs-on: macos-latest
+    defaults:
+      run:
+        working-directory: examples/electron
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: "lts/*"
+
+      - name: Install dependencies
+        run: npm install
+
+      - name: Build unsigned app
+        run: npm run make
+
+      - name: Find .app bundle
+        id: find-app
+        run: |
+          app_path=$(find out -name "*.app" -type d | head -1)
+          echo "path=$app_path" >> "$GITHUB_OUTPUT"
+
+      - name: Configure AWS credentials
+        uses: aws-actions/configure-aws-credentials@v4
+        with:
+          role-to-assume: ${{ secrets.OSX_CODESIGN_ROLE }}
+          aws-region: us-west-2
+
+      - name: Codesign and Notarize
+        id: codesign
+        uses: block/apple-codesign-action@main
+        with:
+          unsigned-artifact-path: examples/electron/${{ steps.find-app.outputs.path }}
+          entitlements-plist-path: examples/electron/entitlements.plist
+          s3-bucket: ${{ secrets.CODESIGN_S3_BUCKET }}
+          artifact-name: electron-example-${{ github.sha }}-${{ github.run_id }}
+
+      - name: Verify signed artifact
+        run: |
+          echo "Signed artifact: ${{ steps.codesign.outputs.signed-artifact-path }}"
+          echo "Build number: ${{ steps.codesign.outputs.build-number }}"
+          echo "Signing duration: ${{ steps.codesign.outputs.signing-duration }}s"
+          test -f "${{ steps.codesign.outputs.signed-artifact-path }}"
+
+      - name: Upload signed artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: ElectronExample-signed
+          path: ${{ steps.codesign.outputs.signed-artifact-path }}
+
+  c-binary:
+    name: "C Binary"
+    if: github.event.pull_request.head.repo.full_name == github.repository || github.event_name == 'push'
+    runs-on: macos-latest
+    defaults:
+      run:
+        working-directory: examples/c-binary
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Build unsigned app
+        run: make
+
+      - name: Configure AWS credentials
+        uses: aws-actions/configure-aws-credentials@v4
+        with:
+          role-to-assume: ${{ secrets.OSX_CODESIGN_ROLE }}
+          aws-region: us-west-2
+
+      - name: Codesign and Notarize
+        id: codesign
+        uses: block/apple-codesign-action@main
+        with:
+          unsigned-artifact-path: examples/c-binary/out/CExample.app
+          s3-bucket: ${{ secrets.CODESIGN_S3_BUCKET }}
+          artifact-name: c-example-${{ github.sha }}-${{ github.run_id }}
+
+      - name: Verify signed artifact
+        run: |
+          echo "Signed artifact: ${{ steps.codesign.outputs.signed-artifact-path }}"
+          echo "Build number: ${{ steps.codesign.outputs.build-number }}"
+          echo "Signing duration: ${{ steps.codesign.outputs.signing-duration }}s"
+          test -f "${{ steps.codesign.outputs.signed-artifact-path }}"
+
+      - name: Upload signed artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: CExample-signed
+          path: ${{ steps.codesign.outputs.signed-artifact-path }}
+
+  xcode:
+    name: "Xcode"
+    if: github.event.pull_request.head.repo.full_name == github.repository || github.event_name == 'push'
+    runs-on: macos-latest
+    defaults:
+      run:
+        working-directory: examples/xcode
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Build unsigned app
+        run: |
+          xcodebuild -project SwiftUIExample.xcodeproj \
+            -scheme SwiftUIExample \
+            -configuration Release \
+            -derivedDataPath out \
+            -arch arm64 -arch x86_64 \
+            ONLY_ACTIVE_ARCH=NO
+
+      - name: Configure AWS credentials
+        uses: aws-actions/configure-aws-credentials@v4
+        with:
+          role-to-assume: ${{ secrets.OSX_CODESIGN_ROLE }}
+          aws-region: us-west-2
+
+      - name: Codesign and Notarize
+        id: codesign
+        uses: block/apple-codesign-action@main
+        with:
+          unsigned-artifact-path: examples/xcode/out/Build/Products/Release/SwiftUIExample.app
+          s3-bucket: ${{ secrets.CODESIGN_S3_BUCKET }}
+          artifact-name: xcode-example-${{ github.sha }}-${{ github.run_id }}
+
+      - name: Verify signed artifact
+        run: |
+          echo "Signed artifact: ${{ steps.codesign.outputs.signed-artifact-path }}"
+          echo "Build number: ${{ steps.codesign.outputs.build-number }}"
+          echo "Signing duration: ${{ steps.codesign.outputs.signing-duration }}s"
+          test -f "${{ steps.codesign.outputs.signed-artifact-path }}"
+
+      - name: Upload signed artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: SwiftUIExample-signed
+          path: ${{ steps.codesign.outputs.signed-artifact-path }}

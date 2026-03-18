@@ -1,0 +1,16 @@
+# Build outputs
+out/
+dist/
+build/
+DerivedData/
+
+# Dependencies
+node_modules/
+
+# Xcode
+*.xcuserdata
+xcuserdata/
+*.xcworkspace/xcuserdata/
+
+# macOS
+.DS_Store
