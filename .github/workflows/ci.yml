@@ -17,6 +17,9 @@ jobs:
     # Fork PRs cannot access secrets — skip them.
     if: github.event.pull_request.head.repo.full_name == github.repository || github.event_name == 'push'
     runs-on: macos-latest
+    permissions:
+      id-token: write
+      contents: read
     defaults:
       run:
         working-directory: examples/electron
@@ -73,6 +76,9 @@ jobs:
     name: "C Binary"
     if: github.event.pull_request.head.repo.full_name == github.repository || github.event_name == 'push'
     runs-on: macos-latest
+    permissions:
+      id-token: write
+      contents: read
     defaults:
       run:
         working-directory: examples/c-binary
@@ -114,6 +120,9 @@ jobs:
     name: "Xcode"
     if: github.event.pull_request.head.repo.full_name == github.repository || github.event_name == 'push'
     runs-on: macos-latest
+    permissions:
+      id-token: write
+      contents: read
     defaults:
       run:
         working-directory: examples/xcode
