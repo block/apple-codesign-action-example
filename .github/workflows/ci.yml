@@ -44,19 +44,14 @@ jobs:
           app_path=$(find out -name "*.app" -type d | head -1)
           echo "path=$app_path" >> "$GITHUB_OUTPUT"
 
-      - name: Configure AWS credentials
-        uses: aws-actions/configure-aws-credentials@v4
-        with:
-          role-to-assume: ${{ secrets.OSX_CODESIGN_ROLE }}
-          aws-region: us-west-2
-
       - name: Codesign and Notarize
         id: codesign
         uses: block/apple-codesign-action@main
         with:
+          osx-codesign-role: ${{ secrets.OSX_CODESIGN_ROLE }}
+          codesign-s3-bucket: ${{ secrets.CODESIGN_S3_BUCKET }}
           unsigned-artifact-path: examples/electron/${{ steps.find-app.outputs.path }}
           entitlements-plist-path: examples/electron/entitlements.plist
-          s3-bucket: ${{ secrets.CODESIGN_S3_BUCKET }}
           artifact-name: electron-example-${{ github.sha }}-${{ github.run_id }}
 
       - name: Verify signed artifact
@@ -89,18 +84,13 @@ jobs:
       - name: Build unsigned app
         run: make
 
-      - name: Configure AWS credentials
-        uses: aws-actions/configure-aws-credentials@v4
-        with:
-          role-to-assume: ${{ secrets.OSX_CODESIGN_ROLE }}
-          aws-region: us-west-2
-
       - name: Codesign and Notarize
         id: codesign
         uses: block/apple-codesign-action@main
         with:
+          osx-codesign-role: ${{ secrets.OSX_CODESIGN_ROLE }}
+          codesign-s3-bucket: ${{ secrets.CODESIGN_S3_BUCKET }}
           unsigned-artifact-path: examples/c-binary/out/CExample.app
-          s3-bucket: ${{ secrets.CODESIGN_S3_BUCKET }}
           artifact-name: c-example-${{ github.sha }}-${{ github.run_id }}
 
       - name: Verify signed artifact
@@ -139,18 +129,13 @@ jobs:
             -arch arm64 -arch x86_64 \
             ONLY_ACTIVE_ARCH=NO
 
-      - name: Configure AWS credentials
-        uses: aws-actions/configure-aws-credentials@v4
-        with:
-          role-to-assume: ${{ secrets.OSX_CODESIGN_ROLE }}
-          aws-region: us-west-2
-
       - name: Codesign and Notarize
         id: codesign
         uses: block/apple-codesign-action@main
         with:
+          osx-codesign-role: ${{ secrets.OSX_CODESIGN_ROLE }}
+          codesign-s3-bucket: ${{ secrets.CODESIGN_S3_BUCKET }}
           unsigned-artifact-path: examples/xcode/out/Build/Products/Release/SwiftUIExample.app
-          s3-bucket: ${{ secrets.CODESIGN_S3_BUCKET }}
           artifact-name: xcode-example-${{ github.sha }}-${{ github.run_id }}
 
       - name: Verify signed artifact
