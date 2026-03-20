@@ -11,9 +11,10 @@ End-to-end examples for [`block/apple-codesign-action`](https://github.com/block
 |---------|-------------|
 | [Electron](./examples/electron/) | Minimal Electron app built with Electron Forge |
 | [C Binary](./examples/c-binary/) | Minimal C program in a hand-assembled `.app` bundle |
+| [DMG](./examples/dmg/) | Minimal `.app` inside a `.dmg` — tests the action's DMG support |
 | [Xcode](./examples/xcode/) | Minimal SwiftUI app built with `xcodebuild` |
 
-Each example produces an unsigned `.app` bundle that is then signed and notarized via `block/apple-codesign-action` in CI.
+Each example produces an unsigned artifact (`.app`, `.zip`, or `.dmg`) that is then signed and notarized via `block/apple-codesign-action` in CI.
 
 ## CI
 

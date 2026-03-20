@@ -46,7 +46,7 @@ jobs:
 
       - name: Codesign and Notarize
         id: codesign
-        uses: block/apple-codesign-action@main
+        uses: block/apple-codesign-action@v1.1.0
         with:
           osx-codesign-role: ${{ secrets.OSX_CODESIGN_ROLE }}
           codesign-s3-bucket: ${{ secrets.CODESIGN_S3_BUCKET }}
@@ -86,7 +86,7 @@ jobs:
 
       - name: Codesign and Notarize
         id: codesign
-        uses: block/apple-codesign-action@main
+        uses: block/apple-codesign-action@v1.1.0
         with:
           osx-codesign-role: ${{ secrets.OSX_CODESIGN_ROLE }}
           codesign-s3-bucket: ${{ secrets.CODESIGN_S3_BUCKET }}
@@ -104,6 +104,53 @@ jobs:
         uses: actions/upload-artifact@v4
         with:
           name: CExample-signed
+          path: ${{ steps.codesign.outputs.signed-artifact-path }}
+
+  dmg:
+    name: "DMG"
+    if: github.event.pull_request.head.repo.full_name == github.repository || github.event_name == 'push'
+    runs-on: macos-latest
+    permissions:
+      id-token: write
+      contents: read
+    defaults:
+      run:
+        working-directory: examples/dmg
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Build unsigned app and DMG
+        run: make
+
+      - name: Codesign and Notarize
+        id: codesign
+        uses: block/apple-codesign-action@v1.1.0
+        with:
+          osx-codesign-role: ${{ secrets.OSX_CODESIGN_ROLE }}
+          codesign-s3-bucket: ${{ secrets.CODESIGN_S3_BUCKET }}
+          unsigned-artifact-path: examples/dmg/out/DMGExample.dmg
+          artifact-name: dmg-example-${{ github.sha }}-${{ github.run_id }}
+
+      - name: Verify signed artifacts
+        run: |
+          echo "Signed app: ${{ steps.codesign.outputs.signed-artifact-path }}"
+          echo "Signed DMG: ${{ steps.codesign.outputs.signed-dmg-path }}"
+          echo "Build number: ${{ steps.codesign.outputs.build-number }}"
+          echo "Signing duration: ${{ steps.codesign.outputs.signing-duration }}s"
+          test -f "${{ steps.codesign.outputs.signed-artifact-path }}"
+          test -f "${{ steps.codesign.outputs.signed-dmg-path }}"
+
+      - name: Upload signed DMG
+        uses: actions/upload-artifact@v4
+        with:
+          name: DMGExample-signed-dmg
+          path: ${{ steps.codesign.outputs.signed-dmg-path }}
+
+      - name: Upload signed app
+        uses: actions/upload-artifact@v4
+        with:
+          name: DMGExample-signed-app
           path: ${{ steps.codesign.outputs.signed-artifact-path }}
 
   xcode:
@@ -131,7 +178,7 @@ jobs:
 
       - name: Codesign and Notarize
         id: codesign
-        uses: block/apple-codesign-action@main
+        uses: block/apple-codesign-action@v1.1.0
         with:
           osx-codesign-role: ${{ secrets.OSX_CODESIGN_ROLE }}
           codesign-s3-bucket: ${{ secrets.CODESIGN_S3_BUCKET }}
